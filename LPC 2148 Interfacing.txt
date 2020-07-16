@@ -1,0 +1,229 @@
+
+#include "nrf24l01.h"
+#include "systemInit.h"
+#include "SPI.h"
+#include "uart.h"
+#include "delays.h"
+   // Defines the channel at which output will be recieved(Reciever's side)
+#define	_CH 1			// Channel 0..125
+  // defines the width of the data to be transmitted.
+#define	_Address_Width	5	// 3..5
+  // defines the size of buffer.
+#define _Buffer_Size 5 // 1..32
+void print_AllRegisters(); // function to print all the registers to verify the connections.
+
+ // function to define the reciever side
+/*void NRF24L01_Receive(char Buf[_Buffer_Size]) {
+	NRF24L01_CE_HIGH;
+	DelayUS(130);
+
+	while ((NRF24L01_Get_Status() & _RX_DR) != _RX_DR);
+
+	NRF24L01_CE_LOW;
+
+	NRF24L01_Read_RX_Buf(Buf, _Buffer_Size);
+	NRF24L01_Clear_Interrupts();
+}*/
+
+ // function to define the transmitter side
+void NRF24L01_Send(char Buf[_Buffer_Size]) {
+
+	NRF24L01_Write_TX_Buf(Buf, _Buffer_Size);
+
+	NRF24L01_RF_TX();
+   // 
+	while ((NRF24L01_Get_Status() & _TX_DS) != _TX_DS);
+
+	NRF24L01_Clear_Interrupts();
+
+}
+
+
+
+void main(void)
+{
+    char Buf[_Buffer_Size] = "Heyy\0"; //Hello :) // use this while sending
+	//char Buf[_Buffer_Size]; //use this for receiving
+	char Address[_Address_Width] = { 0x11, 0x22, 0x33, 0x44, 0x55 };
+
+ // Function to initialize the system
+	SystemInit();
+  // To observe the data whether data is recieved or transmitted. Configured at UART0 with baud rate of 115200. 
+	UART0_Init_115200();
+  // SPI Initialization
+	SPI1_Init();
+
+ // defining CE & CSN as output pin
+	NRF24L01_CE_OUT;
+	NRF24L01_CSN_OUT;
+ // Keeping CE low for initializing the transmission.
+	NRF24L01_CE_LOW;
+	NRF24L01_CSN_HIGH;
+
+
+	//NRF24L01_Init(_RX_MODE, _CH, _1Mbps, Address, _Address_Width, _Buffer_Size);
+
+
+	 // Defining all the parameters
+    NRF24L01_Init(_TX_MODE, _CH, _1Mbps, Address, _Address_Width, _Buffer_Size);
+
+
+
+ // Printing all the registers to help in debugging.
+	print_AllRegisters();
+
+	DelayMS(1000);
+
+	while (1) {
+  // Transmission starts here
+		UART_TxString(0,"\nsending started...");
+		// calling send function
+		NRF24L01_Send(Buf);
+		UART_TxString(0,"\nsent...");
+   // 500 ms delay is provided between two transmission.	
+		DelayMS(500);
+
+//		UART_TxString(0,"\nWaiting for data...");
+//		NRF24L01_Receive(Buf);
+//		UART_TxString(0,"\nData Received = ");
+//		UART_TxString(0,Buf);
+
+	}
+
+}
+
+
+void print_AllRegisters()
+{
+
+
+	unsigned char data1;
+	unsigned char data2[5];
+ // all registers are defined
+	UART_TxString(0,"\n========================== Configurations are ======================== ");
+  // reading the register value and storing data
+	NRF24L01_ReadRegBuf(CONFIG, &data1, 1);
+	UART_TxString(0,"\nCONFIG REG = ");
+	 // printing the data on serial terminal.
+	UART_Printf(0,"%x", data1);
+
+	// reading the register value and storing data
+	NRF24L01_ReadRegBuf(EN_AA, &data1, 1);
+	UART_TxString(0,"\nEN_AA REG = ");
+	 // printing the data on serial terminal.
+	UART_Printf(0,"%x", data1);
+
+	// reading the register value and storing data
+	NRF24L01_ReadRegBuf(EN_RXADDR, &data1, 1);
+	UART_TxString(0,"\nEN_RXADDR REG = ");
+	 // printing the data on serial terminal.
+	UART_Printf(0,"%x", data1);
+
+// reading the register value and storing data
+	NRF24L01_ReadRegBuf(SETUP_AW, &data1, 1);
+	UART_TxString(0,"\nSETUP_AW REG = ");
+	 // printing the data on serial terminal.
+	UART_Printf(0,"%x", data1);
+
+// reading the register value and storing data
+	NRF24L01_ReadRegBuf(SETUP_RETR, &data1, 1);
+	UART_TxString(0,"\nnrf24l01_SETUP_RETR REG = ");
+	 // printing the data on serial terminal.
+	UART_Printf(0,"%x", data1);
+
+// reading the register value and storing data
+	NRF24L01_ReadRegBuf(RF_CH, &data1, 1);
+	UART_TxString(0,"\nRF_CH REG = ");
+	 // printing the data on serial terminal.
+	UART_Printf(0,"%x", data1);
+
+// reading the register value and storing data
+	NRF24L01_ReadRegBuf(RF_SETUP, &data1, 1);
+	UART_TxString(0,"\nRF_SETUP REG = ");
+	 // printing the data on serial terminal.
+	UART_Printf(0,"%x", data1);
+
+// reading the register value and storing data
+	NRF24L01_ReadRegBuf(STATUS, &data1, 1);
+	UART_TxString(0,"\nSTATUS REG = ");
+	 // printing the data on serial terminal.
+	UART_Printf(0,"%x", data1);
+
+// reading the register value and storing data
+	NRF24L01_ReadRegBuf(OBSERVE_TX, &data1, 1);
+	UART_TxString(0,"\nOBSERVE_TX REG = ");
+	 // printing the data on serial terminal.
+	UART_Printf(0,"%x", data1);
+
+// reading the register value and storing data
+	NRF24L01_ReadRegBuf(RX_ADDR_P0, data2, 5);
+	UART_TxString(0,"\nRX P0 Address reg = ");
+	 // printing the data on serial terminal.
+	UART_Printf(0,"%x", data2[0]);
+	UART_Printf(0,"%x", data2[1]);
+	UART_Printf(0,"%x", data2[2]);
+	UART_Printf(0,"%x", data2[3]);
+	UART_Printf(0,"%x", data2[4]);
+
+// reading the register value and storing data
+	NRF24L01_ReadRegBuf(RX_ADDR_P1, data2, 5);
+	UART_TxString(0,"\nRX P1 Address reg = ");
+	 // printing the data on serial terminal.
+	UART_Printf(0,"%x", data2[0]);
+	UART_Printf(0,"%x", data2[1]);
+	UART_Printf(0,"%x", data2[2]);
+	UART_Printf(0,"%x", data2[3]);
+	UART_Printf(0,"%x", data2[4]);
+
+// reading the register value and storing data
+	NRF24L01_ReadRegBuf(RX_ADDR_P2, data2, 5);
+	UART_TxString(0,"\nRX P2 Address reg = ");
+	 // printing the data on serial terminal.
+	UART_Printf(0,"%x", data2[0]);
+	UART_Printf(0,"%x", data2[1]);
+	UART_Printf(0,"%x", data2[2]);
+	UART_Printf(0,"%x", data2[3]);
+	UART_Printf(0,"%x", data2[4]);
+
+// reading the register value and storing data
+	NRF24L01_ReadRegBuf(RX_ADDR_P3, data2, 5);
+	UART_TxString(0,"\nRX P3 Address reg = ");
+	 // printing the data on serial terminal.
+	UART_Printf(0,"%x", data2[0]);
+	UART_Printf(0,"%x", data2[1]);
+	UART_Printf(0,"%x", data2[2]);
+	UART_Printf(0,"%x", data2[3]);
+	UART_Printf(0,"%x", data2[4]);
+
+// reading the register value and storing data
+	NRF24L01_ReadRegBuf(RX_ADDR_P4, data2, 5);
+	UART_TxString(0,"\nRX P4 Address reg = ");
+	UART_Printf(0,"%x", data2[0]);
+	UART_Printf(0,"%x", data2[1]);
+	UART_Printf(0,"%x", data2[2]);
+	UART_Printf(0,"%x", data2[3]);
+	UART_Printf(0,"%x", data2[4]);
+	
+	// reading the register value and storing data
+
+	NRF24L01_ReadRegBuf(RX_ADDR_P5, data2, 5);
+	UART_TxString(0,"\nRX P5 Address reg = ");
+	 // printing the data on serial terminal.
+	UART_Printf(0,"%x", data2[0]);
+	UART_Printf(0,"%x", data2[1]);
+	UART_Printf(0,"%x", data2[2]);
+	UART_Printf(0,"%x", data2[3]);
+	UART_Printf(0,"%x", data2[4]);
+
+// reading the register value and storing data
+	NRF24L01_ReadRegBuf(TX_ADDR, data2, 5);
+	UART_TxString(0,"\nTX Address reg = ");
+	 // printing the data on serial terminal.
+	UART_Printf(0,"%x", data2[0]);
+	UART_Printf(0,"%x", data2[1]);
+	UART_Printf(0,"%x", data2[2]);
+	UART_Printf(0,"%x", data2[3]);
+	UART_Printf(0,"%x", data2[4]);
+
+}
+
